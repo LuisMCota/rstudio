@@ -1,0 +1,113 @@
+---
+title: "Proyect Statistics"
+author: 
+- "Luis Fernando Monterrubio Cota"
+- "Karina Campos Almeida"
+- "Cynthia Vidal Ovando"
+- "Brianna Ayelen Balam Velasco"
+- "Edoardo Alonso Martinez Perez"
+date: '2022-05-16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+
+mode <- function(x) {
+   return(as.numeric(names(which.max(table(x)))))
+}
+```
+
+##INTRODUCTION
+
+We used an INEGI database on the general population of the country, then we extracted a sample of people studying and not studying in an age range from 3 years old to 14 years old in the whole country.
+
+```{r censo, echo=FALSE}
+censo <- read.csv("diccionario_de_datos/INE_ENTIDAD_2020.csv",sep =",", dec = ",", header = T, encoding = "UTF-8")
+str(censo)
+```
+
+##DATA
+
+To proceed we need to have 3 data of education in each state of the Republic:
+
+1.  Students
+2.  Who do not study
+3.  Population in the age range.
+
+After having our database and extracting the information of the people who do not study and the population in the range of 3 to 14 years, we obtain the people who do study and we get the total of the three types of people.
+
+```{r cleaning, echo=FALSE}
+total <- censo %>% 
+  select(ENT, NOM_ENT, P3A5_NOA, P6A11_NOA, P12A14NOA, P_3A5, P_6A11, P_12A14)%>%
+  rename(STATE = NOM_ENT, Age_3_5 = P3A5_NOA, Age_6_11 = P6A11_NOA, Age_12_14 = P12A14NOA, Age_3_5_ = P_3A5, Age_6_11_ = P_6A11, Age_12_14_ = P_12A14)%>%
+  mutate(Total_no_study = Age_3_5 + Age_6_11 + Age_12_14) %>%
+  mutate(Total_population = Age_3_5_ + Age_6_11_ + Age_12_14_) %>%
+  select(ENT, STATE, Total_no_study, Total_population) %>%
+  mutate(Total_study = Total_population - Total_no_study)
+
+Total <- total %>%
+  select_if(is.numeric) %>%
+  colSums()
+
+Total <- bind_rows(total, Total)
+Total[(dim(Total)[1]), 1] = "$"
+Total[(dim(Total)[1]), 2] = "Total"
+
+rm(censo)
+
+Total %>%
+  kbl() %>%
+  kable_styling()
+```
+
+##TABLE WITH FREQUENCY 
+
+```{r Table, echo=FALSE}
+frecuencia <- read.csv("diccionario_de_datos/frecuencia.csv", sep = ",", dec = ";", header = T)
+
+frecuencia %>%
+  kbl() %>%
+  kable_styling()
+```
+
+##RESULTS
+
+Once we have our data organized, we are going to process what we have obtained and take some measurements such as:
+
+1. Average
+2. Median
+3. Mode
+4. Variance
+5. Standard Deviation
+
+```{r results, echo=FALSE}
+results <- data.frame(
+  "Measures" = c("Mean", "Median", "Mode", "Variance", "Standard Deviation"),
+  "Total_study" = round(c(mean(total$Total_study), median(total$Total_study), mode(total$Total_study), var(total$Total_study), sd(total$Total_study))),
+  "Total_no_study" = round(c(mean(total$Total_no_study), median(total$Total_no_study), mode(total$Total_no_study), var(total$Total_no_study), sd(total$Total_no_study))),
+  "Total_population"= round(c(mean(total$Total_population), median(total$Total_population), mode(total$Total_population), var(total$Total_population), sd(total$Total_population))))
+
+results %>%
+  kbl() %>%
+  kable_styling()
+
+```
+##PLOTS
+
+```{r, echo=FALSE}
+ggplot(data = total, aes(x = STATE, y = Total_study, fill = "red")) + geom_bar(stat = "identity") + labs(title = "STUDENTS IN MEXICO", x = "States", y = "Students") + theme(axis.text = element_text(angle = 90))
+
+ggplot(data = total, aes(x = STATE, y = Total_no_study)) + geom_bar(stat = "identity") + labs(title = "NO STUDENTS IN MEXICO", x = "States", y = "No students") + theme(axis.text = element_text(angle = 90))
+```
+
+##CONCLUSIONS
+
+
+##REFERENCES
+
+https://www.inegi.org.mx/app/descarga/default.html
